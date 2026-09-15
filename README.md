@@ -27,4 +27,20 @@ envíos de WhatsApp o formularios web).
 - `python3` (servidor local)
 - `zenity` opcional para el menú gráfico; sin él usa el menú de terminal
 
+## Versión Android (APK, Kotlin)
+
+- Proyecto en `android/`: app Kotlin con WebView que empaqueta la misma web
+  (`index.html`) y guarda los videos procesados en **Descargas/Videos16MB**
+  mediante un puente nativo (`AndroidPuente.guardarDescarga`).
+- Requisitos para compilar: JDK 17 y Android SDK (plataforma 34).
+
+```bash
+cd android
+./sincronizar-web.sh      # copia index.html del repositorio al APK
+gradle assembleDebug      # genera app/build/outputs/apk/debug/app-debug.apk
+```
+
+- Tras cambiar `index.html`, ejecuta `sincronizar-web.sh` y recompila:
+  así la web y el APK quedan siempre sincronizados.
+
 Sesión de origen: "Aplicación web para comprimir videos a MP4".

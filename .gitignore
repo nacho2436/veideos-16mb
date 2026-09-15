@@ -82,3 +82,6 @@ Trash/
 tmp/
 *.bak
 *.tmp
+
+# Estado del servidor local de esta app
+.servidor-video.pid
