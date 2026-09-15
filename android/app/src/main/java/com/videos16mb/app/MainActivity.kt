@@ -52,6 +52,21 @@ class MainActivity : Activity() {
                 view: WebView,
                 request: WebResourceRequest
             ): WebResourceResponse? = assetLoader.shouldInterceptRequest(request.url)
+
+            // Los enlaces externos (Ko-fi, etc.) se abren en el navegador del sistema
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: WebResourceRequest
+            ): Boolean {
+                val url = request.url
+                if (url.host == "appassets.androidplatform.net") return false
+                return try {
+                    startActivity(Intent(Intent.ACTION_VIEW, url))
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
         }
 
         web.webChromeClient = object : WebChromeClient() {

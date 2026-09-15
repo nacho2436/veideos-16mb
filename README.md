@@ -1,5 +1,7 @@
 # 🎬 Comprime o divide videos a máximo 16 MB
 
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F1F81BZQDW)
+
 Aplicación web local para **comprimir o dividir videos** hasta que pesen
 máximo 16 MB (ideal para servicios que limitan el peso de archivos, como
 envíos de WhatsApp o formularios web).

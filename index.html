@@ -169,6 +169,12 @@
   footer{margin-top:26px; color:var(--tx2); font-size:13px}
   footer ul{margin:8px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:5px}
   code{background:#0b1226; border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-size:12px}
+  .kofi{
+    margin-top:22px; padding:16px; border:1px solid var(--line); border-radius:12px;
+    background:rgba(255,255,255,.02); text-align:center;
+  }
+  .kofi p{margin:0 0 10px; font-size:14.5px; color:var(--tx)}
+  .kofi a{color:#9ec1ff; font-size:12.5px}
 </style>
 </head>
 <body>
@@ -282,6 +288,12 @@
   </details>
 
   <footer>
+    <div class="kofi">
+      <p>☕ ¿Te resultó útil esta app? Apoya su desarrollo con una donación</p>
+      <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+      <script type='text/javascript'>kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'F1F81BZQDW');kofiwidget2.draw();</script>
+      <div style="margin-top:8px"><a href="https://ko-fi.com/F1F81BZQDW" target="_blank" rel="noopener">ko-fi.com/F1F81BZQDW</a></div>
+    </div>
     <ul>
       <li>Al abrir la página se descarga FFmpeg (~31 MB) con jsDelivr y respaldo automático en unpkg; si la conexión se estanca 45 s, cambia de CDN solo. Luego queda en la caché del navegador y las siguientes veces arranca casi al instante.</li>
       <li>Para usarla, sirve la carpeta por http: doble clic en el acceso <code>Servidor Videos 16MB</code> (en esta misma carpeta) y elige «Iniciar» — o ejecuta <code>python3 -m http.server 8000</code> en una terminal y abre <code>http://localhost:8000</code>.</li>
