@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Comprime o divide videos a máximo 16 MB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<style>
+  :root{
+    --bg:#0a0f1e; --card:#111832; --line:#242f52; --tx:#e9edf9; --tx2:#9aa7c7;
+    --ac:#6c7bff; --ac2:#22d3ee; --ok:#34d399; --warn:#fbbf24; --err:#f87171; --r:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,sans-serif;
+    color:var(--tx); min-height:100vh; line-height:1.45;
+    background:
+      radial-gradient(1100px 600px at 85% -10%, #1c2a5e 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #10394c 0%, transparent 55%),
+      var(--bg);
+  }
+  .container{max-width:880px; margin:0 auto; padding:30px 20px 70px}
+
+  /* ---------- cabecera ---------- */
+  .head{display:flex; gap:16px; align-items:flex-start}
+  .logo{
+    flex:0 0 auto; width:56px; height:56px; border-radius:16px; display:grid; place-items:center;
+    font-size:28px; background:linear-gradient(135deg,var(--ac),var(--ac2));
+    box-shadow:0 8px 24px rgba(76,97,255,.35);
+  }
+  h1{margin:0; font-size:clamp(22px,4vw,32px); letter-spacing:-.02em}
+  h1 span{background:linear-gradient(90deg,#a5b4ff,#67e8f9); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .sub{margin:.35em 0 0; color:var(--tx2); font-size:15px; max-width:60ch}
+  .top-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; align-items:center}
+  .privacy{font-size:13px; color:#a7f3d0; background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.35); padding:4px 12px; border-radius:99px}
+  .engine{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--tx2); border:1px solid var(--line); background:rgba(255,255,255,.02); padding:4px 12px; border-radius:99px}
+  .chip-dot{width:9px; height:9px; border-radius:50%; background:#64748b; flex:0 0 auto}
+  .chip-dot.load{background:var(--warn); animation:pulse 1.2s infinite}
+  .chip-dot.ok{background:var(--ok)}
+  .chip-dot.err{background:var(--err)}
+  @keyframes pulse{50%{opacity:.35}}
+
+  /* ---------- tarjetas ---------- */
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),var(--card);
+    border:1px solid var(--line); border-radius:var(--r); padding:20px; margin-top:18px;
+    box-shadow:0 12px 32px rgba(0,0,0,.35);
+  }
+  .card.off{opacity:.55; pointer-events:none}
+  .hidden{display:none!important}
+  h2{margin:0 0 4px; font-size:16px}
+  .label-txt{display:block; font-size:13px; color:var(--tx2); margin:0 0 8px; font-weight:600; letter-spacing:.02em; text-transform:uppercase}
+
+  /* ---------- modos ---------- */
+  .modes{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px}
+  .mode{cursor:pointer; display:block}
+  .mode input{position:absolute; opacity:0; pointer-events:none}
+  .mode-card{
+    border:1px solid var(--line); border-radius:12px; padding:12px 14px; height:100%;
+    background:rgba(255,255,255,.02); transition:border-color .15s, background .15s, box-shadow .15s;
+  }
+  .mode-card b{display:block; font-size:14px}
+  .mode-card span{display:block; font-size:12.5px; color:var(--tx2); margin-top:3px}
+  .mode:hover .mode-card{border-color:#3a4677}
+  .mode input:checked + .mode-card{
+    border-color:var(--ac); background:rgba(108,123,255,.12);
+    box-shadow:0 0 0 1px var(--ac), 0 6px 18px rgba(108,123,255,.25);
+  }
+  .mode input:focus-visible + .mode-card{outline:2px solid var(--ac2); outline-offset:2px}
+
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px}
+  @media (max-width:640px){ .row2{grid-template-columns:1fr} }
+  input[type=number], select{
+    width:100%; background:#0b1226; color:var(--tx); border:1px solid var(--line); border-radius:10px;
+    padding:10px 12px; font-size:15px;
+  }
+  input[type=number]:focus, select:focus{outline:none; border-color:var(--ac); box-shadow:0 0 0 2px rgba(108,123,255,.25)}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .chip{
+    cursor:pointer; font-size:13px; color:var(--tx2); background:rgba(255,255,255,.03);
+    border:1px solid var(--line); border-radius:99px; padding:3px 12px;
+  }
+  .chip:hover{color:var(--tx); border-color:#3a4677}
+  .chip.active{color:#c7d2fe; border-color:var(--ac); background:rgba(108,123,255,.15)}
+
+  /* ---------- dropzone ---------- */
+  .dropzone{
+    text-align:center; padding:44px 20px; cursor:pointer; user-select:none;
+    border:2px dashed #384470; border-radius:var(--r); transition:border-color .15s, background .15s;
+    background:rgba(255,255,255,.015); margin-top:18px;
+  }
+  .dropzone:hover, .dropzone.drag{border-color:var(--ac); background:rgba(108,123,255,.08)}
+  .dropzone.off{opacity:.5; pointer-events:none}
+  .dz-icon{font-size:40px; display:block; margin-bottom:8px}
+  .dropzone b{font-size:16px}
+  .dropzone p{margin:.4em 0 0; color:var(--tx2); font-size:13.5px}
+
+  /* ---------- info del archivo ---------- */
+  .meta-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px}
+  .meta-item{background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:10px; padding:8px 12px; min-width:0}
+  .meta-item .k{display:block; font-size:11px; color:var(--tx2); text-transform:uppercase; letter-spacing:.05em}
+  .meta-item .v{display:block; font-size:14px; font-weight:600; overflow-wrap:anywhere}
+  .hint{margin-top:14px; border-radius:10px; padding:10px 14px; font-size:13.5px}
+  .hint.ok{background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.35); color:#a7f3d0}
+  .hint.warn{background:rgba(251,191,36,.09); border:1px solid rgba(251,191,36,.35); color:#fde68a}
+  .actions{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap}
+
+  /* ---------- botones ---------- */
+  .btn{
+    cursor:pointer; border:none; border-radius:12px; font-size:15px; font-weight:600; color:var(--tx);
+    padding:11px 22px; background:#1b2445; border:1px solid var(--line); text-decoration:none; display:inline-block;
+    transition:transform .1s, box-shadow .15s, background .15s;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{
+    background:linear-gradient(90deg,var(--ac),var(--ac2)); color:#071022; font-weight:700;
+    box-shadow:0 8px 22px rgba(76,97,255,.35); border:none; font-size:16px; padding:13px 28px;
+  }
+  .btn.ghost{background:rgba(255,255,255,.04)}
+  .btn.danger{background:rgba(248,113,113,.12); border-color:rgba(248,113,113,.5); color:#fecaca}
+  .btn.small{padding:6px 14px; font-size:13.5px}
+  .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
+
+  /* ---------- progreso ---------- */
+  .phase-row{display:flex; justify-content:space-between; gap:12px; font-size:14.5px; margin-bottom:10px}
+  .phase-row .right{color:var(--tx2); white-space:nowrap}
+  #phase{font-weight:600}
+  .bar{height:14px; border-radius:99px; background:#0a0f22; border:1px solid var(--line); overflow:hidden}
+  #fill{
+    height:100%; width:0%; border-radius:99px; transition:width .25s linear;
+    background:linear-gradient(90deg,var(--ac),var(--ac2));
+    background-size:200% 100%; animation:slide 2s linear infinite;
+  }
+  @keyframes slide{to{background-position:-200% 0}}
+
+  /* ---------- mensajes ---------- */
+  .box-msg{border-radius:12px; padding:12px 16px; font-size:14px; margin-top:16px; white-space:pre-line}
+  .box-msg.err{background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.45); color:#fecaca}
+  .box-msg.info{background:rgba(108,123,255,.1); border:1px solid rgba(108,123,255,.45); color:#c7d2fe}
+  .box-msg.warn-file{background:rgba(251,191,36,.09); border:1px solid rgba(251,191,36,.45); color:#fde68a}
+
+  /* ---------- resultados ---------- */
+  .results-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+  .results-head h2{margin:0}
+  #resultList{list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:10px}
+  .result{
+    display:flex; align-items:center; gap:14px; background:rgba(255,255,255,.03);
+    border:1px solid var(--line); border-radius:12px; padding:10px 14px;
+  }
+  .r-ic{font-size:22px}
+  .r-info{flex:1; min-width:0}
+  .r-name{font-weight:600; font-size:14.5px; overflow-wrap:anywhere}
+  .r-size{font-size:12.5px; color:var(--tx2)}
+  .badge{font-size:12px; padding:3px 10px; border-radius:99px; white-space:nowrap}
+  .badge.ok{color:#a7f3d0; border:1px solid rgba(52,211,153,.45); background:rgba(52,211,153,.1)}
+  .badge.err{color:#fecaca; border:1px solid rgba(248,113,113,.45); background:rgba(248,113,113,.1)}
+  @media (max-width:560px){ .result{flex-wrap:wrap} }
+
+  /* ---------- log ---------- */
+  details.log{margin-top:18px; color:var(--tx2); font-size:13.5px}
+  details.log summary{cursor:pointer}
+  details.log pre{
+    max-height:220px; overflow:auto; background:#070b18; border:1px solid var(--line);
+    border-radius:10px; padding:12px; font-size:11.5px; margin:8px 0 0; white-space:pre-wrap; word-break:break-all;
+  }
+
+  footer{margin-top:26px; color:var(--tx2); font-size:13px}
+  footer ul{margin:8px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:5px}
+  code{background:#0b1226; border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-size:12px}
+</style>
+</head>
+<body>
+<main class="container">
+
+  <header>
+    <div class="head">
+      <div class="logo">🎬</div>
+      <div>
+        <h1>Comprime o divide videos a <span>máximo 16 MB</span></h1>
+        <p class="sub">Convierte cualquier video a MP4 por debajo del límite — o córtalo en partes que no lo superen. Todo se procesa en tu navegador: tus archivos nunca salen de tu computadora.</p>
+      </div>
+    </div>
+    <div class="top-row">
+      <span class="privacy">🔒 100% local · sin subir archivos</span>
+      <span class="engine"><span id="engineChip" class="chip-dot load"></span><span id="engineText">Motor: descargando FFmpeg (~31 MB, solo la 1ª vez)…</span></span>
+    </div>
+    <div id="fileWarn" class="box-msg warn-file hidden"></div>
+  </header>
+
+  <!-- Configuración -->
+  <section id="config" class="card">
+    <span class="label-txt">¿Qué quieres hacer?</span>
+    <div class="modes">
+      <label class="mode">
+        <input type="radio" name="mode" value="auto" checked>
+        <div class="mode-card"><b>⚙️ Automático</b><span>Comprime a un solo MP4 y, si no alcanza, lo divide en partes</span></div>
+      </label>
+      <label class="mode">
+        <input type="radio" name="mode" value="compress">
+        <div class="mode-card"><b>📉 Solo comprimir</b><span>Recodifica todo el video en un único MP4 ≤ límite</span></div>
+      </label>
+      <label class="mode">
+        <input type="radio" name="mode" value="split">
+        <div class="mode-card"><b>✂️ Solo dividir</b><span>Corta en partes ≤ límite sin recodificar (si el formato lo permite)</span></div>
+      </label>
+    </div>
+    <div class="row2">
+      <div>
+        <label class="label-txt" for="targetMB">Límite por archivo (MB)</label>
+        <input type="number" id="targetMB" min="1" max="500" step="1" value="16">
+        <div class="chips" id="chips">
+          <button class="chip" data-mb="8">8</button>
+          <button class="chip active" data-mb="16">16</button>
+          <button class="chip" data-mb="25">25</button>
+          <button class="chip" data-mb="50">50</button>
+          <button class="chip" data-mb="100">100</button>
+        </div>
+      </div>
+      <div>
+        <label class="label-txt" for="preset">Velocidad / calidad de compresión</label>
+        <select id="preset">
+          <option value="superfast" selected>Equilibrado (recomendado)</option>
+          <option value="veryfast">Mejor calidad (más lento)</option>
+          <option value="ultrafast">Máxima velocidad (calidad baja)</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Zona de carga -->
+  <section id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Elegir video">
+    <span class="dz-icon">📼</span>
+    <b>Arrastra tu video aquí o haz clic para elegirlo</b>
+    <p>MP4, MKV, AVI, MOV, WEBM, WMV, FLV, TS…</p>
+    <input type="file" id="fileInput" accept="video/*,.mkv,.avi,.wmv,.flv,.ts,.m4v,.mov,.webm,.mp4,.3gp" hidden>
+  </section>
+
+  <!-- Info del archivo -->
+  <section id="fileCard" class="card hidden">
+    <div class="meta-grid">
+      <div class="meta-item" style="grid-column:1/-1"><span class="k">Archivo</span><span class="v" id="metaName">—</span></div>
+      <div class="meta-item"><span class="k">Tamaño</span><span class="v" id="metaSize">—</span></div>
+      <div class="meta-item"><span class="k">Duración</span><span class="v" id="metaDur">—</span></div>
+      <div class="meta-item"><span class="k">Resolución</span><span class="v" id="metaRes">—</span></div>
+      <div class="meta-item"><span class="k">Formato</span><span class="v" id="metaFmt">—</span></div>
+      <div class="meta-item"><span class="k">Acción</span><span class="v"><button id="changeBtn" class="btn ghost small">Quitar archivo</button></span></div>
+    </div>
+    <div id="hint" class="hint hidden"></div>
+    <div id="warnBig" class="hint warn hidden">⚠️ El archivo es muy grande (más de 800 MB): el navegador podría quedarse sin memoria. El modo «Solo dividir» es el más ligero.</div>
+    <div class="actions">
+      <button id="processBtn" class="btn primary" disabled>▶ Procesar video</button>
+      <button id="cancelBtn" class="btn danger hidden">Cancelar</button>
+    </div>
+  </section>
+
+  <!-- Progreso -->
+  <section id="progressCard" class="card hidden">
+    <div class="phase-row">
+      <span id="phase">Preparando…</span>
+      <span class="right"><span id="pct">0%</span> · <span id="elapsed">0 s</span></span>
+    </div>
+    <div class="bar"><div id="fill"></div></div>
+  </section>
+
+  <!-- Mensajes -->
+  <div id="msgBox" class="box-msg hidden"></div>
+
+  <!-- Resultados -->
+  <section id="results" class="card hidden">
+    <div class="results-head">
+      <h2 id="resultSummary">Archivos generados</h2>
+      <button id="downloadAllBtn" class="btn ghost small">⬇ Descargar todo</button>
+    </div>
+    <ul id="resultList"></ul>
+  </section>
+
+  <details class="log">
+    <summary>Registro técnico (FFmpeg)</summary>
+    <pre id="logPre"></pre>
+  </details>
+
+  <footer>
+    <ul>
+      <li>Al abrir la página se descarga FFmpeg (~31 MB) con jsDelivr y respaldo automático en unpkg; si la conexión se estanca 45 s, cambia de CDN solo. Luego queda en la caché del navegador y las siguientes veces arranca casi al instante.</li>
+      <li>Para usarla, sirve la carpeta por http: doble clic en el acceso <code>Servidor Videos 16MB</code> (en esta misma carpeta) y elige «Iniciar» — o ejecuta <code>python3 -m http.server 8000</code> en una terminal y abre <code>http://localhost:8000</code>.</li>
+      <li>Recomendado en Chrome, Edge o Firefox de escritorio. Los videos muy largos tardan: la compresión se hace en tu propio equipo.</li>
+    </ul>
+  </footer>
+</main>
+
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* El UMD de FFmpeg crea su worker como "module", pero los workers de módulo
+   desde URLs blob: fallan en file:// y el chunk 814 es un script clásico
+   (usa importScripts). Forzamos worker clásico cuando la URL es un blob. */
+const OriginalWorker = window.Worker;
+window.Worker = class extends OriginalWorker {
+  constructor(url, opts) {
+    if (String(url).startsWith('blob:')) { super(url); return; }
+    super(url, opts);
+  }
+};
+
+const $ = (id) => document.getElementById(id);
+const MB = 1024 * 1024;
+const MIN_TOTAL_BPS = 200000;      // por debajo de esto, comprimir a un solo archivo no es viable
+const COPY_OK_V = ['h264', 'hevc'];
+const COPY_OK_A = ['', 'aac', 'mp3', 'mp4a', 'ac3', 'eac3'];
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const kbps = (v) => `${Math.max(1, Math.round(v / 1000))}k`;
+const fmtMB = (b) => `${(b / MB).toLocaleString('es-ES', { maximumFractionDigits: 2 })} MB`;
+const fmtDur = (s) => {
+  const t = Math.round(s), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+};
+const extOf = (n) => { const m = (n || '').toLowerCase().match(/\.([a-z0-9]{1,5})$/); return m ? m[1] : ''; };
+
+const state = {
+  file: null, inName: null, meta: null,
+  ffmpeg: null, engineReady: false, enginePromise: null, engineAbort: null,
+  busy: false, cancelled: false, abortMsg: '',
+  results: [], job: null, probe: null, watchdog: null, lastTick: 0,
+};
+
+/* ================= registro (log) ================= */
+const logLines = [];
+let logT = 0;
+function pushLog(msg) {
+  logLines.push(msg);
+  if (logLines.length > 500) logLines.splice(0, logLines.length - 500);
+  if (state.probe) feedProbe(msg);
+  const now = Date.now();
+  if (now - logT > 300) {
+    logT = now;
+    const pre = $('logPre');
+    pre.textContent = logLines.slice(-250).join('\n');
+    pre.scrollTop = pre.scrollHeight;
+  }
+}
+function feedProbe(msg) {
+  const p = state.probe;
+  if (!p) return;
+  const m = msg.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+  if (m && p.duration == null) p.duration = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+  if (/Stream #\d+:\d+.*?: Video:/.test(msg)) {
+    p.hasVideo = true;
+    const r = msg.match(/,\s(\d{2,5})x(\d{2,5})/);
+    if (r && !p.w) { p.w = +r[1]; p.h = +r[2]; }
+    const c = msg.match(/Video:\s(\w+)/);
+    if (c) p.vcodec = c[1].toLowerCase();
+  }
+  if (/Stream #\d+:\d+.*?: Audio:/.test(msg)) {
+    p.hasAudio = true;
+    const c = msg.match(/Audio:\s(\w+)/);
+    if (c) p.acodec = c[1].toLowerCase();
+  }
+}
+
+/* ================= motor FFmpeg ================= */
+const ENGINE_CDNS = [
+  { name: 'jsDelivr', core: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd', worker: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js' },
+  { name: 'unpkg', core: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd', worker: 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js' },
+];
+const FILE_MSG = 'Tu navegador bloquea el motor al abrir la página directamente como archivo (file://). Solución: en una terminal, dentro de la carpeta de esta página, ejecuta "python3 -m http.server 8000" y luego ábrela en http://localhost:8000';
+function setChip(txt, cls) {
+  $('engineChip').className = `chip-dot ${cls}`;
+  $('engineText').textContent = txt;
+}
+let engineCache = null;
+async function getCacheStore() {
+  if (engineCache !== null) return engineCache;
+  try { engineCache = await caches.open('ffmpeg-engine-v1'); } catch (_) { engineCache = false; }
+  return engineCache || null;
+}
+// descarga con porcentaje visible; si la conexión se estanca 45 s se reintenta con otro CDN.
+// El motor queda guardado en la caché del navegador: las siguientes veces es casi instantáneo.
+async function fetchEngineFile(url, mime, onProg, signal) {
+  const store = await getCacheStore();
+  let cached = null;
+  if (store) { try { cached = await store.match(url); } catch (_) {} }
+  if (cached) {
+    const blob = await cached.blob();
+    onProg(blob.size, blob.size, false);
+    return blob;
+  }
+  const local = new AbortController();
+  const onOuterAbort = () => local.abort();
+  signal.addEventListener('abort', onOuterAbort);
+  let stallTimer = setTimeout(() => local.abort(), 45000);
+  const resetStall = () => { clearTimeout(stallTimer); stallTimer = setTimeout(() => local.abort(), 45000); };
+  try {
+    const res = await fetch(url, { signal: local.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const total = +res.headers.get('Content-Length') || 0;
+    if (!res.body) {
+      const blob = await res.blob();
+      onProg(blob.size, blob.size, false);
+      return blob;
+    }
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      resetStall();
+      onProg(received, total, true);
+    }
+    const blob = new Blob(chunks, { type: mime });
+    if (store) { try { await store.put(url, new Response(blob, { headers: { 'Content-Type': mime } })); } catch (_) {} }
+    return blob;
+  } finally {
+    clearTimeout(stallTimer);
+    signal.removeEventListener('abort', onOuterAbort);
+  }
+}
+async function ensureEngine() {
+  if (state.engineReady) return state.ffmpeg;
+  if (!state.enginePromise) {
+    state.engineAbort = new AbortController();
+    state.enginePromise = (async () => {
+      const { FFmpeg } = FFmpegWASM;
+      // 1) descargar los 3 archivos del motor (con respaldo automático de CDN)
+      let blobs = null;
+      let lastErr = null;
+      for (const cdn of ENGINE_CDNS) {
+        try {
+          const files = [
+            { key: 'coreJS', url: `${cdn.core}/ffmpeg-core.js`, mime: 'text/javascript' },
+            { key: 'worker', url: cdn.worker, mime: 'text/javascript' },
+            { key: 'wasm', url: `${cdn.core}/ffmpeg-core.wasm`, mime: 'application/wasm' },
+          ];
+          const out = {};
+          let doneCount = 0;
+          for (const f of files) {
+            out[f.key] = await fetchEngineFile(f.url, f.mime, (rec, total, live) => {
+              const frac = clamp((doneCount + (live ? (total ? rec / total : 0.5) : 1)) / files.length, 0, 0.999);
+              const extra = live && total ? ` · ${(rec / MB).toFixed(1)} de ${(total / MB).toFixed(1)} MB` : '';
+              const txt = `Descargando motor FFmpeg (${cdn.name})… ${Math.round(frac * 100)}%${extra}`;
+              setChip(txt, 'load');
+              if (state.busy) { setPhase(txt); setBar(frac * 0.25); }
+              state.lastTick = Date.now();
+            }, state.engineAbort.signal);
+            doneCount++;
+          }
+          blobs = out;
+          break;
+        } catch (e) {
+          if (state.cancelled || (state.engineAbort && state.engineAbort.signal.aborted)) throw new Error('__CANCELLED__');
+          lastErr = e;
+          setChip(`CDN ${cdn.name} falló; probando el siguiente…`, 'load');
+        }
+      }
+      if (!blobs) throw new Error('No se pudo descargar el motor FFmpeg desde ningún CDN (¿conexión lenta o sin internet?). Detalle: ' + ((lastErr && lastErr.message) || lastErr));
+      // 2) arrancar el motor con los archivos ya descargados
+      const ff = new FFmpeg();
+      ff.on('log', ({ message }) => pushLog(message));
+      ff.on('progress', handleProgress);
+      setChip('Inicializando motor FFmpeg…', 'load');
+      if (state.busy) setPhase('Inicializando motor FFmpeg (compilando WASM)…');
+      let loadTimer;
+      try {
+        await Promise.race([
+          ff.load({
+            coreURL: URL.createObjectURL(blobs.coreJS),
+            wasmURL: URL.createObjectURL(blobs.wasm),
+            classWorkerURL: URL.createObjectURL(blobs.worker),
+          }),
+          new Promise((_, rej) => { loadTimer = setTimeout(() => rej(new Error('__LOAD_TIMEOUT__')), 90000); }),
+        ]);
+      } catch (e) {
+        try { ff.terminate(); } catch (_) {}
+        if (/__LOAD_TIMEOUT__/.test(e.message || '')) {
+          throw new Error(location.protocol === 'file:'
+            ? FILE_MSG
+            : 'El motor FFmpeg no respondió al arrancar (90 s). Vuelve a intentarlo; si persiste, recarga la página.');
+        }
+        throw new Error((location.protocol === 'file:'
+          ? 'El navegador bloqueó el motor FFmpeg (página abierta como archivo). '
+          : 'El motor FFmpeg no pudo arrancar. ') + 'Detalle: ' + ((e && e.message) || e || '(sin detalle)'));
+      } finally {
+        clearTimeout(loadTimer);
+      }
+      state.ffmpeg = ff;
+      state.engineReady = true;
+      setChip('Motor FFmpeg listo', 'ok');
+      return ff;
+    })().catch((e) => {
+      state.enginePromise = null;
+      if (!/__CANCELLED__/.test(e.message || '')) setChip('Error cargando el motor', 'err');
+      throw e;
+    });
+  }
+  return state.enginePromise;
+}
+
+/* ================= progreso / watchdog ================= */
+function handleProgress(e) {
+  state.lastTick = Date.now();
+  const j = state.job;
+  if (!j) return;
+  let r = e && isFinite(e.progress) ? e.progress : 0;
+  if (j.dur > 0 && e && e.time > 0) r = (e.time / 1e6) / j.dur;
+  r = clamp(r, 0, 1);
+  setBar(j.total > 1 ? (j.index + r) / j.total : r);
+}
+function setBar(p) {
+  p = clamp(p, 0, 1);
+  $('fill').style.width = `${(p * 100).toFixed(1)}%`;
+  $('pct').textContent = `${Math.round(p * 100)}%`;
+}
+function setPhase(t) { $('phase').textContent = t; }
+function startWatchdog() {
+  state.lastTick = Date.now();
+  state.watchdog = setInterval(() => {
+    if (Date.now() - state.lastTick > 180000) {
+      try { if (state.ffmpeg) state.ffmpeg.terminate(); } catch (_) {}
+      state.ffmpeg = null; state.engineReady = false; state.enginePromise = null; state.inName = null;
+      state.cancelled = true;
+      state.abortMsg = 'El proceso se quedó congelado, probablemente por falta de memoria del navegador. Prueba con un archivo más pequeño o con el modo «Solo dividir».';
+    }
+  }, 5000);
+}
+function stopWatchdog() { if (state.watchdog) { clearInterval(state.watchdog); state.watchdog = null; } }
+
+/* ================= análisis del video ================= */
+async function writeInput(ff, file) {
+  let ext = extOf(file.name).replace(/[^a-z0-9]/g, '').slice(0, 5);
+  if (!ext) ext = 'mp4';
+  const name = `input.${ext}`;
+  const { fetchFile } = FFmpegUtil;
+  await ff.writeFile(name, await fetchFile(file));
+  state.inName = name;
+}
+async function readOut(ff, name) {
+  const d = await ff.readFile(name);
+  return d instanceof Uint8Array ? d : new Uint8Array(d);
+}
+async function readMeta(file) {
+  const meta = { duration: 0, w: 0, h: 0, vcodec: '', acodec: '', via: '' };
+  // 1) intento instantáneo con un elemento <video>
+  try {
+    const url = URL.createObjectURL(file);
+    const info = await new Promise((res) => {
+      const v = document.createElement('video');
+      v.preload = 'metadata'; v.muted = true;
+      const done = (x) => { clearTimeout(t); res(x); };
+      const t = setTimeout(() => done(null), 6000);
+      v.onloadedmetadata = () => done(v);
+      v.onerror = () => done(null);
+      v.src = url;
+    });
+    URL.revokeObjectURL(url);
+    if (info && isFinite(info.duration) && info.duration > 0) {
+      meta.duration = info.duration;
+      meta.w = info.videoWidth || 0;
+      meta.h = info.videoHeight || 0;
+      meta.via = 'html5';
+      const ext = extOf(file.name);
+      if (ext === 'webm') meta.vcodec = 'vp9?';                       // webm casi seguro no se puede copiar a mp4
+      else if (['mp4', 'mov', 'm4v', '3gp', 'mkv'].includes(ext)) meta.vcodec = 'h264?'; // suposición habitual
+      return meta;
+    }
+  } catch (_) {}
+  // 2) sondeo con FFmpeg (formatos que el navegador no reproduce)
+  const ff = await ensureEngine();
+  await writeInput(ff, file);
+  state.probe = { duration: null };
+  try { await ff.exec(['-i', state.inName]); } catch (_) {}
+  const p = state.probe;
+  state.probe = null;
+  if (p.duration != null && p.duration > 0) {
+    meta.duration = p.duration;
+    meta.w = p.w || 0;
+    meta.h = p.h || 0;
+    meta.vcodec = p.vcodec || '';
+    meta.acodec = p.acodec || '';
+    meta.via = 'ffmpeg';
+    return meta;
+  }
+  throw new Error('No se pudo analizar este archivo. Puede estar dañado o usar un formato no compatible.');
+}
+function copyPlan(meta) {
+  const v = (meta.vcodec || '').replace(/\?$/, '').toLowerCase();
+  const a = (meta.acodec || '').toLowerCase();
+  const vOK = COPY_OK_V.includes(v);
+  const aOK = COPY_OK_A.includes(a);
+  if (vOK && aOK) return 'copy';     // remux directo: rapidísimo y sin pérdida
+  if (vOK) return 'audio';           // solo se recodifica el audio
+  return 'encode';                   // hay que recodificar el video
+}
+
+/* ================= helpers de codificación ================= */
+// baja la resolución si el bitrate por segundo es demasiado bajo para el tamaño original
+function pickScale(w, h, vb) {
+  if (!w || !h) return null;
+  const cap = vb < 700e3 ? 480 : vb < 1500e3 ? 720 : vb < 3000e3 ? 1080 : vb < 6000e3 ? 1440 : 2160;
+  if (w >= h && h > cap) return `scale=-2:${cap}`;
+  if (w < h && w > cap) return `scale=${cap}:-2`;
+  return null;
+}
+function encodeArgs(o) {
+  const a = ['-y'];
+  if (o.ss != null) a.push('-ss', o.ss.toFixed(3));
+  a.push('-i', o.inName);
+  if (o.t != null) a.push('-t', o.t.toFixed(3));
+  a.push('-map', '0:v:0', '-map', '0:a:0?',
+    '-c:v', 'libx264', '-preset', o.preset,
+    '-b:v', kbps(o.vb), '-maxrate', kbps(o.vb * 1.45), '-bufsize', kbps(o.vb * 2));
+  if (o.vf) a.push('-vf', o.vf);
+  a.push('-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', kbps(o.ab), '-movflags', '+faststart', o.out);
+  return a;
+}
+function ensureNotCancelled() {
+  if (state.cancelled) { const e = new Error('__CANCELLED__'); throw e; }
+}
+async function encodeSegment(ff, inName, ss, t, out, target, preset) {
+  let ab = clamp(((target * 8 * 0.9) / t) * 0.14, 48000, 128000);
+  let vb = Math.max(80000, Math.floor((target * 8 * 0.9) / t) - ab);
+  let data = null;
+  for (let a = 1; a <= 3; a++) {
+    ensureNotCancelled();
+    const vf = pickScale(state.meta.w, state.meta.h, vb);
+    setPhase(`Re-comprimiendo segmento para ajustar el tamaño (intento ${a} de 3)…`);
+    const code = await ff.exec(encodeArgs({ ss, t, inName, out, vb, ab, preset, vf }));
+    if (code !== 0) throw new Error(`FFmpeg no pudo codificar un segmento (código ${code}). Consulta el registro técnico.`);
+    data = await readOut(ff, out);
+    if (data.byteLength <= target) return { data, ok: true };
+    const f = (target / data.byteLength) * 0.9;
+    vb = Math.max(60000, Math.floor(vb * f));
+    ab = Math.max(48000, Math.floor(ab * Math.max(f, 0.7)));
+  }
+  return { data, ok: false };
+}
+
+/* ================= flujo: comprimir ================= */
+async function compressFlow(ff, target, preset) {
+  const dur = state.meta.duration;
+  const total = (target * 8 * 0.94) / dur;   // 6% de margen por el contenedor
+  let ab = clamp(total * 0.14, 48000, 128000);
+  let vb = Math.max(80000, Math.floor(total - ab));
+  let data = null, size = 0;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    ensureNotCancelled();
+    const vf = pickScale(state.meta.w, state.meta.h, vb);
+    state.job = { index: attempt - 1, total: 3, dur };
+    setPhase(`Comprimiendo video (intento ${attempt} de 3)…`);
+    const code = await ff.exec(encodeArgs({ inName: state.inName, out: 'out.mp4', vb, ab, preset, vf }));
+    if (code !== 0) throw new Error(`FFmpeg no pudo comprimir el video (código ${code}). Consulta el registro técnico.`);
+    data = await readOut(ff, 'out.mp4');
+    size = data.byteLength;
+    if (size <= target) return { data, size, ok: true };
+    const f = (target / size) * 0.92;
+    vb = Math.max(60000, Math.floor(vb * f));
+    ab = Math.max(48000, Math.floor(ab * Math.max(f, 0.7)));
+  }
+  return { data, size, ok: false };
+}
+
+/* ================= flujo: dividir ================= */
+async function splitGeneric(ff, inName, srcBytes, dur, target, preset, plan) {
+  const segDur = Math.max(0.5, (target * 0.93 * dur) / srcBytes);
+  const n = clamp(Math.ceil(dur / segDur), 1, 2000);
+  const step = dur / n;
+  for (let i = 0; i < n; i++) {
+    ensureNotCancelled();
+    const ss = i * step;
+    const t = Math.min(step * 1.001, dur - ss);
+    if (t <= 0.05) break;
+    state.job = { index: i, total: n, dur: t };
+    setPhase(`Cortando parte ${i + 1} de ${n}…`);
+    const out = `part_${String(i + 1).padStart(4, '0')}.mp4`;
+    let data = null;
+    if (plan === 'copy' || plan === 'audio') {
+      const a = ['-y', '-ss', ss.toFixed(3), '-i', inName, '-t', t.toFixed(3), '-map', '0:v:0', '-map', '0:a:0?'];
+      if (plan === 'copy') a.push('-c', 'copy');
+      else a.push('-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k');
+      a.push('-avoid_negative_ts', 'make_zero', '-movflags', '+faststart', out);
+      let code = 0;
+      try { code = await ff.exec(a); } catch (_) { code = 1; }
+      if (code === 0) {
+        const d = await readOut(ff, out);
+        if (d.byteLength <= target) data = d;   // si se pasó del límite, recodificar el trozo
+      }
+    }
+    if (!data) {
+      const r = await encodeSegment(ff, inName, ss, t, out, target, preset);
+      data = r.data;
+      if (!r.ok) showNotice('Una parte quedó ligeramente por encima del límite; está marcada en la lista.');
+    }
+    addResult(partName(i + 1), new Blob([data], { type: 'video/mp4' }), data.byteLength, target);
+    try { await ff.deleteFile(out); } catch (_) {}
+  }
+}
+
+/* ================= orquestación ================= */
+async function processFile() {
+  if (state.busy || !state.file || !state.meta) return;
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const targetMB = clamp(parseFloat($('targetMB').value) || 16, 1, 500);
+  $('targetMB').value = targetMB;
+  const target = targetMB * MB;
+  const preset = $('preset').value;
+
+  clearResults();
+  hideMsg();
+  state.busy = true;
+  state.cancelled = false;
+  state.abortMsg = '';
+  setBusyUI(true);
+  $('progressCard').classList.remove('hidden');
+  setBar(0);
+  startTimer();
+
+  try {
+    setPhase('Preparando motor…');
+    const ff = await ensureEngine();
+    ensureNotCancelled();
+    if (!state.inName) await writeInput(ff, state.file);
+    startWatchdog();   // solo vigila el trabajo de FFmpeg, nunca la descarga del motor
+
+    const dur = state.meta.duration;
+    const totalBps = (target * 8 * 0.94) / dur;
+    let plan;
+    if (mode === 'compress') plan = 'compress';
+    else if (mode === 'split') plan = 'split';
+    else plan = totalBps >= MIN_TOTAL_BPS ? 'compress' : 'split';
+
+    if (plan === 'compress') {
+      const r = await compressFlow(ff, target, preset);
+      if (r.ok) {
+        addResult(`${baseName()}_${targetMB}MB.mp4`, new Blob([r.data], { type: 'video/mp4' }), r.size, target);
+        try { await ff.deleteFile('out.mp4'); } catch (_) {}
+      } else if (mode === 'auto') {
+        setPhase('El comprimido supera el límite: dividiendo en partes…');
+        await splitGeneric(ff, 'out.mp4', r.size, dur, target, 'superfast', 'copy');
+        try { await ff.deleteFile('out.mp4'); } catch (_) {}
+      } else {
+        addResult(`${baseName()}_${targetMB}MB.mp4`, new Blob([r.data], { type: 'video/mp4' }), r.size, target);
+        showNotice(`Tras 3 intentos el resultado quedó en ${fmtMB(r.size)} (por encima de ${targetMB} MB). Prueba el modo «Automático» o «Solo dividir».`);
+      }
+    } else {
+      setPhase('Dividiendo…');
+      await splitGeneric(ff, state.inName, state.file.size, dur, target, preset, copyPlan(state.meta));
+    }
+    setBar(1);
+    setPhase('✅ ¡Listo!');
+  } catch (e) {
+    if (state.abortMsg) showError(new Error(state.abortMsg));
+    else if (state.cancelled || /__CANCELLED__/.test(e.message || '')) {
+      setPhase('⏹ Cancelado.');
+      showNotice('Proceso cancelado. Los archivos ya generados siguen disponibles para descargar.');
+    } else showError(e);
+  } finally {
+    stopWatchdog();
+    stopTimer();
+    state.busy = false;
+    state.job = null;
+    setBusyUI(false);
+  }
+}
+
+/* ================= resultados ================= */
+function baseName() {
+  return (state.file.name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|'`;$%]+/g, '_').trim().slice(0, 60)) || 'video';
+}
+function partName(i) { return `${baseName()}_parte_${String(i).padStart(2, '0')}.mp4`; }
+
+function addResult(name, blob, size, target) {
+  const url = URL.createObjectURL(blob);
+  state.results.push({ name, url, size });
+  const li = document.createElement('li');
+  li.className = 'result';
+  li.innerHTML = `
+    <div class="r-ic">🎞️</div>
+    <div class="r-info"><div class="r-name"></div><div class="r-size">${fmtMB(size)}</div></div>
+    ${size <= target ? '<span class="badge ok">≤ límite ✓</span>' : '<span class="badge err">supera el límite</span>'}
+    <a class="btn ghost small" href="${url}" download="${name}">⬇ Descargar</a>`;
+  li.querySelector('.r-name').textContent = name;
+  $('resultList').appendChild(li);
+  updateResultSummary();
+}
+function updateResultSummary() {
+  const n = state.results.length;
+  $('results').classList.toggle('hidden', n === 0);
+  const tot = state.results.reduce((s, r) => s + r.size, 0);
+  $('resultSummary').textContent = `${n} archivo${n > 1 ? 's' : ''} · ${fmtMB(tot)} en total`;
+}
+function clearResults() {
+  state.results.forEach((r) => URL.revokeObjectURL(r.url));
+  state.results = [];
+  $('resultList').innerHTML = '';
+  $('results').classList.add('hidden');
+}
+function downloadAll() {
+  state.results.forEach((r, i) => {
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = r.url;
+      a.download = r.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }, i * 400);
+  });
+}
+
+/* ================= mensajes / UI ================= */
+function showError(e) {
+  const b = $('msgBox');
+  let m = `❌ ${(e && e.message) || 'Error inesperado'}`;
+  if (/motor|FFmpeg|carg/i.test(m)) {
+    m += '\n\nConsejos: comprueba tu conexión (el motor se descarga de unpkg.com). Si abriste el archivo directamente (file://) y no funciona, sírvelo con un servidor local: python3 -m http.server';
+  }
+  b.className = 'box-msg err';
+  b.textContent = m;
+  b.classList.remove('hidden');
+}
+function showNotice(t) {
+  const b = $('msgBox');
+  b.className = 'box-msg info';
+  b.textContent = `ℹ️ ${t}`;
+  b.classList.remove('hidden');
+}
+function hideMsg() { $('msgBox').classList.add('hidden'); }
+
+let timerInt = null, t0 = 0;
+function startTimer() {
+  t0 = Date.now();
+  $('elapsed').textContent = '0 s';
+  timerInt = setInterval(() => { $('elapsed').textContent = `${Math.round((Date.now() - t0) / 1000)} s`; }, 500);
+}
+function stopTimer() { if (timerInt) { clearInterval(timerInt); timerInt = null; } }
+
+function setBusyUI(busy) {
+  $('processBtn').disabled = busy;
+  $('processBtn').textContent = busy ? '⏳ Procesando…' : '▶ Procesar video';
+  $('cancelBtn').classList.toggle('hidden', !busy);
+  $('changeBtn').disabled = busy;
+  $('config').classList.toggle('off', busy);
+  $('dropzone').classList.toggle('off', busy);
+}
+
+/* ================= selección de archivo ================= */
+async function setFile(file) {
+  if (!file || state.busy) return;
+  state.file = file;
+  state.inName = null;
+  state.meta = null;
+  hideMsg();
+  clearResults();
+  $('progressCard').classList.add('hidden');
+  $('fileCard').classList.remove('hidden');
+  $('metaName').textContent = file.name;
+  $('metaSize').textContent = fmtMB(file.size);
+  $('metaDur').textContent = 'Analizando…';
+  $('metaRes').textContent = '—';
+  $('metaFmt').textContent = (extOf(file.name) || '—').toUpperCase();
+  $('processBtn').disabled = true;
+  $('hint').classList.add('hidden');
+  $('warnBig').classList.toggle('hidden', file.size <= 800 * MB);
+
+  ensureEngine().catch(() => {});   // precarga del motor en segundo plano
+
+  try {
+    const meta = await readMeta(file);
+    if (state.file !== file) return;
+    state.meta = meta;
+    $('metaDur').textContent = fmtDur(meta.duration);
+    $('metaRes').textContent = meta.w ? `${meta.w}×${meta.h}` : '—';
+    $('processBtn').disabled = false;
+    renderHint();
+  } catch (e) {
+    showError(e);
+    $('metaDur').textContent = '—';
+  }
+}
+function renderHint() {
+  const box = $('hint');
+  if (!state.meta || !state.meta.duration) { box.classList.add('hidden'); return; }
+  const targetMB = clamp(parseFloat($('targetMB').value) || 16, 1, 500);
+  const total = (targetMB * MB * 8) / state.meta.duration;
+  let verdict, cls;
+  if (total >= 500000) { verdict = '✅ Hay margen para comprimir a un solo archivo con buena calidad.'; cls = 'ok'; }
+  else if (total >= MIN_TOTAL_BPS) { verdict = '⚠️ La calidad quedará justa; el modo Automático evaluará si conviene dividir.'; cls = 'warn'; }
+  else { verdict = '⚠️ El video es demasiado largo para ese límite en un solo archivo: se dividirá en partes.'; cls = 'warn'; }
+  box.className = `hint ${cls}`;
+  box.textContent = `Para ${targetMB} MB en ${fmtDur(state.meta.duration)} se necesitan ≈ ${Math.max(1, Math.round(total / 1000))} kbps totales. ${verdict}`;
+}
+function resetAll() {
+  if (state.busy) return;
+  state.file = null;
+  state.inName = null;
+  state.meta = null;
+  clearResults();
+  hideMsg();
+  $('fileCard').classList.add('hidden');
+  $('progressCard').classList.add('hidden');
+  $('fileInput').value = '';
+}
+
+/* ================= eventos ================= */
+const dz = $('dropzone');
+const fi = $('fileInput');
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fi.click(); } });
+['dragenter', 'dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
+['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+dz.addEventListener('drop', (e) => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+fi.addEventListener('change', () => { if (fi.files && fi.files[0]) setFile(fi.files[0]); });
+
+$('changeBtn').addEventListener('click', () => { resetAll(); fi.click(); });
+$('processBtn').addEventListener('click', processFile);
+$('downloadAllBtn').addEventListener('click', downloadAll);
+$('cancelBtn').addEventListener('click', () => {
+  if (!state.busy) return;
+  state.cancelled = true;
+  state.abortMsg = '';
+  try { if (state.engineAbort) state.engineAbort.abort(); } catch (_) {}
+  try { if (state.ffmpeg) state.ffmpeg.terminate(); } catch (_) {}
+  state.ffmpeg = null;
+  state.engineReady = false;
+  state.enginePromise = null;
+  state.inName = null;
+  setChip('Motor detenido (se recargará al procesar)', 'load');
+});
+$('targetMB').addEventListener('input', renderHint);
+$('chips').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  $('targetMB').value = b.dataset.mb;
+  document.querySelectorAll('#chips .chip').forEach((c) => c.classList.toggle('active', c === b));
+  renderHint();
+});
+
+/* aviso cuando la página se abre con doble clic (file://): el navegador bloquea el motor */
+function showFileWarning() {
+  const b = $('fileWarn');
+  const t1 = document.createElement('div');
+  t1.innerHTML = '<b>⚠️ Abriste la página con doble clic (file://).</b> Por seguridad, Chrome y Firefox bloquean el motor de video en este modo: la descarga avanzará, pero nunca terminará de iniciar.';
+  const t2 = document.createElement('div');
+  t2.style.marginTop = '8px';
+  t2.textContent = 'Solución: haz doble clic en el acceso «Servidor Videos 16MB» que está en esta misma carpeta y elige «Iniciar servidor y abrir la app». Alternativa por terminal:';
+  const code = document.createElement('code');
+  code.style.display = 'inline-block';
+  code.style.margin = '8px 0';
+  code.textContent = 'python3 -m http.server 8000';
+  const btn = document.createElement('button');
+  btn.className = 'btn ghost small';
+  btn.style.marginLeft = '8px';
+  btn.textContent = '📋 Copiar comando';
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText('cd "$(dirname "$(realpath index.html)")" && python3 -m http.server 8000');
+      btn.textContent = '✔ Copiado — pégalo en una terminal con Ctrl+Shift+V';
+    } catch (_) { btn.textContent = 'Cópialo a mano desde el recuadro'; }
+  });
+  b.append(t1, t2, code, btn);
+  b.classList.remove('hidden');
+}
+
+/* gancho mínimo de depuración y pruebas */
+window.__videoApp = { state, setFile, processFile, ensure: ensureEngine };
+
+/* arranque: comprobar que el CDN cargó y descargar el motor de inmediato */
+if (!window.FFmpegWASM || !window.FFmpegUtil) {
+  showError(new Error('No se pudo cargar la librería FFmpeg desde el CDN. Comprueba tu conexión a internet y recarga la página.'));
+} else {
+  if (location.protocol === 'file:') showFileWarning();
+  ensureEngine().catch(() => {});   // precarga en segundo plano desde que se abre la página
+}
+})();
+</script>
+</body>
+</html>

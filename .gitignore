@@ -1,0 +1,84 @@
+# ============================================================
+#  .gitignore — SOLO PROYECTO LIMPIO (copia de seguridad)
+#  Objetivo: que NUNCA se suba información personal del equipo
+# ============================================================
+
+# --- SECRETOS Y CREDENCIALES (lo más importante) ---
+.env
+.env.*
+*.env
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*credentials*
+*token*
+*secrets*
+.secrets/
+credentials.json
+service-account*.json
+firebase-*.json
+google-services-*.json
+
+# --- BASES DE DATOS CON DATOS REALES ---
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.db
+db/*.sqlite*
+
+# --- INFORMACIÓN LOCAL DE LA MÁQUINA ---
+local.properties
+.gradle/
+*.log
+logs/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- ARCHIVOS PERSONALES (fotos, videos, documentos) ---
+# Descomenta si tu proyecto tiene medios personales:
+# *.mp4
+# *.mp3
+# *.jpeg
+# *.jpg
+# *.png
+# *.pdf
+# *.docx
+# *.xlsx
+WhatsApp*
+*/ImagenesPersonales/*
+
+# --- BUILD / COMPILADOS (se regeneran solos) ---
+node_modules/
+dist/
+build/
+out/
+target/
+__pycache__/
+*.apk
+*.aab
+*.exe
+*.o
+*.class
+*.jar
+!gradle-wrapper.jar
+venv/
+.venv/
+
+# --- EDITORES E IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.cache/
+
+# --- SISTEMA / NO PROYECTO ---
+Trash/
+tmp/
+*.bak
+*.tmp

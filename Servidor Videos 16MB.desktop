@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Servidor Videos 16MB
+Name[es]=Servidor Videos 16MB
+Comment=Iniciar o detener el servidor local de la app de compresión de videos
+Comment[es]=Iniciar o detener el servidor local de la app de compresión de videos
+Exec="/home/jose/Documentos/proyects z code/veideos  16 mb/servidor-video.sh"
+Terminal=false
+Icon=video-x-generic
+Categories=Utility;
