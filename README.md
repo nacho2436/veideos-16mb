@@ -46,3 +46,9 @@ gradle assembleDebug      # genera app/build/outputs/apk/debug/app-debug.apk
   así la web y el APK quedan siempre sincronizados.
 
 Sesión de origen: "Aplicación web para comprimir videos a MP4".
+
+## ☕ Donaciones
+
+Si este proyecto te sirve, apóyame en Ko-fi:
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F1F81BZQDW)
